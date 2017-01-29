@@ -12,8 +12,8 @@ from my_util import logger
 
 
 config = ConfigParser()
-config.read('./env')
-thread_time_min = config.getint('settings', 'watch_interval_sec')
+config.read('./.env')
+thread_time_min = config.getint('settings', 'watch_interval_min')
 thread_time_sec = thread_time_min * 60
 services = config.items('jr_services')
 

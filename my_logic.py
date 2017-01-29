@@ -12,7 +12,7 @@ import requests
 
 
 config = ConfigParser()
-config.read('./env')
+config.read('./.env')
 
 connectionString = config.get('settings', 'connection_string')
 engine = sqlal.create_engine(connectionString, echo=False)
