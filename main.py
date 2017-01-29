@@ -24,7 +24,10 @@ def scrape_service():
             scraper = JRService(url)
             data = scraper.get_data()
             operation = OperationInformation()
-            operation.push_chat(url, data)
+            operation.push_chat(data)
+            write_value = 'True' if data['in_trouble'] else 'False'
+            config.set('in_trouble', key, write_value)
+            config.write(open('./.env', 'w'))
     except Exception as e:
         logger.error(e.with_traceback())
     finally:
