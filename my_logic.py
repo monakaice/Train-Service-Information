@@ -9,8 +9,6 @@ import requests
 config = ConfigParser()
 config.read('./.env')
 
-connectionString = config.get('settings', 'connection_string')
-
 
 class OperationInformation:
     def __init__(self):
