@@ -33,20 +33,16 @@ class JRService(Scraper):
         route_name = route_element.find('h1', {'class': 'title'}).find(text=True, recursive=False)
         update_time_str = route_element.find('span', {'class': 'subText'}).find(text=True, recursive=False)
 
-        # 1900年になってしまうため年の補完を行う。
-        year = datetime.today().year
-        convert_str = '%d年%s' % (year, update_time_str)
-        update_time = datetime.strptime(convert_str, '%Y年%m月%d日 %H時%M分更新')
+        update_time = self.__get_update_datetime(update_time_str)
 
         # 運行情報
         status_element = soup.find('div', {'id': 'mdServiceStatus'})
         information = status_element.find('p').find(text=True, recursive=False)
-        posting_element = status_element.find('p').find('span')
-        posting_date = ''
-        if posting_element is not None:
-            posting_date = posting_element.find(text=True, recursive=False)
 
-        message = information + posting_date
+        posting_element = status_element.find('p').find('span')
+        posting_data = self.__get_posting_datetime(posting_element)
+
+        message = information + posting_data['datetime_str']
 
         trouble_class = status_element.find('dd', {'class': 'trouble'})
         in_trouble = False
@@ -55,7 +51,8 @@ class JRService(Scraper):
 
         data = {
             'route_name': route_name,
-            'update_time': update_time,
+            'update_datetime': update_time,
+            'posting_datetime': posting_data['datetime'],
             'message': message,
             'in_trouble': in_trouble
         }
@@ -63,3 +60,25 @@ class JRService(Scraper):
         logger.info(dict_to_str(data))
 
         return data
+
+    @staticmethod
+    def __get_update_datetime(update_time_str):
+        year = datetime.today().year
+        convert_str = '%d年%s' % (year, update_time_str)
+        update_time = datetime.strptime(convert_str, '%Y年%m月%d日 %H時%M分更新')
+        return update_time
+
+    @staticmethod
+    def __get_posting_datetime(element):
+        posting_date_str = ''
+        posting_date = None
+        if element is not None:
+            posting_date_str = element.find(text=True, recursive=False)
+            year = datetime.today().year
+            convert_str = '%d年%s' % (year, posting_date_str)
+            posting_date = datetime.strptime(convert_str, '%Y年（%m月%d日 %H時%M分掲載）')
+
+        return {
+            'datetime_str': posting_date_str,
+            'datetime': posting_date
+        }

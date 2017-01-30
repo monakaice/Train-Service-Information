@@ -3,12 +3,13 @@
 
 
 from configparser import ConfigParser
+from datetime import datetime
 from scraping import JRService
 from threading import Timer
 from time import sleep
 from sys import exit
-from my_logic import OperationInformation
 from my_util import logger
+import requests
 
 
 config = ConfigParser()
@@ -18,16 +19,45 @@ thread_time_sec = thread_time_min * 60
 services = config.items('jr_services')
 
 
+def push_slack_chat(name, message):
+    url = config.get('settings', 'post_url')
+    token = config.get('settings', 'token')
+    channel = config.get('settings', 'channel')
+    data = {
+        'token': token,
+        'channel': channel,
+        'username': name,
+        'text': message
+    }
+    requests.post(url, data=data)
+
+
 def scrape_service():
     try:
         for key, url in services:
             scraper = JRService(url)
             data = scraper.get_data()
-            operation = OperationInformation()
-            operation.push_chat(data)
-            write_value = 'True' if data['in_trouble'] else 'False'
-            config.set('in_trouble', key, write_value)
-            config.write(open('./.env', 'w'))
+
+            last_posting_datetime_str = config.get('posting_datetime', key)
+            last_posting_datetime = datetime.strptime(last_posting_datetime_str, '%Y-%m-%d %H:%M')
+
+            last_in_trouble = config.getboolean('in_trouble', key)
+            if data['in_trouble'] and (data['posting_datetime'] <= last_posting_datetime):
+                continue
+            elif (data['in_trouble'] and not last_in_trouble)\
+                    or (last_in_trouble and not data['in_trouble'])\
+                    or data['in_trouble'] and (data['posting_datetime'] > last_posting_datetime):
+
+                push_slack_chat(data['route_name'], data['message'])
+
+                in_trouble_str = 'True' if data['in_trouble'] else 'False'
+                config.set('in_trouble', key, in_trouble_str)
+                if data['in_trouble']:
+                    posting_datetime_str = data['posting_datetime'].strftime('%Y-%m-%d %H:%M')
+                    config.set('posting_datetime', key, posting_datetime_str)
+
+                config.write(open('./.env', 'w'))
+
     except Exception as e:
         logger.error(e.with_traceback())
     finally:
