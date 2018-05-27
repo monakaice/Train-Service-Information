@@ -32,6 +32,21 @@ def push_slack_chat(name, message):
     requests.post(url, data=data)
 
 
+def push_webex_chat(name, message):
+    url = config.get('settings', 'webex_post_url')
+    auth = config.get('settings', 'webex_auth')
+    room_id = config.get('settings', 'webex_room_id')
+    headers = {
+        'content-type': 'application/json; charset=utf-8',
+        'Authorization': 'Bearer ' + auth
+    }
+    payload = {
+        'roomId': room_id,
+        'text': name + '\n' + message
+    }
+    requests.post(url, json=payload, headers=headers)
+
+
 def scrape_service():
     try:
         for key, url in services:
@@ -48,7 +63,8 @@ def scrape_service():
                     or (last_in_trouble and not data['in_trouble'])\
                     or data['in_trouble'] and (data['posting_datetime'] > last_posting_datetime):
 
-                push_slack_chat(data['route_name'], data['message'])
+                # push_slack_chat(data['route_name'], data['message'])
+                push_webex_chat(data['route_name'], data['message'])
 
                 in_trouble_str = 'True' if data['in_trouble'] else 'False'
                 config.set('in_trouble', key, in_trouble_str)
